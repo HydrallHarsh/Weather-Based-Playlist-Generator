@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dynamic Playlist Generator{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg-gradient-from: #7f00ff;
+            --bg-gradient-to: #e100ff;
+            --text-primary: #ffffff;
+            --text-secondary: #f0f0f0;
+            --text-accent: #ffd700;
+        }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-100px); }
+            100% { transform: translateY(0px); }
+        }
+        .float-animation {
+            animation: float 10s ease-in-out infinite;
+        }
+        body {
+            background: linear-gradient(to bottom right, var(--bg-gradient-from), var(--bg-gradient-to));
+            transition: background 1s ease-in-out;
+            color: var(--text-primary);
+        }
+        .rain {
+            position: fixed;
+            top: -100px;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+        .rain-drop {
+            position: absolute;
+            width: 2px;
+            height: 20px;
+            background-color: rgba(255, 255, 255, 0.5);
+            animation: rain-fall linear infinite;
+        }
+        @keyframes rain-fall {
+            0% {
+                transform: translateY(-100px);
+            }
+            100% {
+                transform: translateY(100vh);
+            }
+        }
+        .lightning {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0);
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.1s ease-in-out;
+        }
+        .lightning-flash {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+    <nav class="bg-white bg-opacity-10 backdrop-blur-lg shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-2xl font-bold" style="color: var(--text-primary);">DPG</a>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-center space-x-4">
+                        <a href="/" class="hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition duration-300" style="color: var(--text-primary);">Home</a>
+                        <a href="{%url 'spotify_login' %}" class="hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition duration-300" style="color: var(--text-primary);">Generate</a>
+                        <a href="{% url 'generate_playlists' %}" class="hover:bg-white hover:bg-opacity-20 px-1 py-2 rounded-md text-sm font-medium transition duration-300" style="color: var(--text-primary);">My Playlists</a>
+                        {% if user.is_authenticated %}
+                            <span class="px-1 py-2 rounded-md text-sm font-medium" style="color: var(--text-primary);">
+                                👋 Hi, {{ user.username }}
+                            </span>
+                            <a href="{% url 'logout' %}" class="hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition duration-300" style="color: var(--text-primary);">Logout</a>
+                        {% else %}
+                            <a href="{% url 'login' %}" class="hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition duration-300" style="color: var(--text-primary);">Login</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-grow">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <footer class="bg-white bg-opacity-10 backdrop-blur-lg">
+        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+            <p class="text-center" style="color: var(--text-secondary);">&copy; 2024 Dynamic Playlist Generator. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <div class="fixed top-0 left-0 w-full h-full pointer-events-none z-[-1] overflow-hidden">
+        <div class="absolute top-1/4 left-1/4 w-20 h-20 bg-white rounded-full opacity-10 float-animation" style="animation-delay: 0s;"></div>
+        <div class="absolute top-3/4 left-1/2 w-32 h-32 bg-white rounded-full opacity-10 float-animation" style="animation-delay: 1s;"></div>
+        <div class="absolute top-1/2 left-3/4 w-24 h-24 bg-white rounded-full opacity-10 float-animation" style="animation-delay: 2s;"></div>
+        <div class="absolute top-1/3 left-2/3 w-20 h-20 bg-white rounded-full opacity-10 float-animation" style="animation-delay: 4s;"></div>
+        <div class="absolute top-3/4 -left-1/4 w-24 h-24 bg-white rounded-full opacity-10 float-animation" style="animation-delay: 2s;"></div>
+    </div>
+
+    <div id="rain-container" class="rain hidden"></div>
+    <div id="lightning" class="lightning"></div>
+
+    <script>
+        function updateBackgroundBasedOnWeather(weather) {
+            let fromColor, toColor, textPrimary, textSecondary, textAccent;
+            
+            if (weather.includes('thunderstorm')) {
+                fromColor = '#1a202c';
+                toColor = '#2d3748';
+                textPrimary = '#ffffff';
+                textSecondary = '#e2e8f0';
+                textAccent = '#f6ad55';
+                createRainEffect();
+                createLightningEffect();
+            } else if (weather.includes('rain')) {
+                fromColor = '#4a5568';
+                toColor = '#2d3748';
+                textPrimary = '#ffffff';
+                textSecondary = '#e2e8f0';
+                textAccent = '#63b3ed';
+                createRainEffect();
+                removeLightningEffect();
+            } else if (weather.includes('cloud')) {
+                fromColor = '#718096';
+                toColor = '#4a5568';
+                textPrimary = '#ffffff';
+                textSecondary = '#e2e8f0';
+                textAccent = '#a0aec0';
+                removeRainEffect();
+                removeLightningEffect();
+            } else if (weather.includes('sun') || weather.includes('clear')) {
+                fromColor = '#f6e05e';
+                toColor = '#4299e1';
+                textPrimary = '#1a202c';
+                textSecondary = '#2d3748';
+                textAccent = '#ed8936';
+                removeRainEffect();
+                removeLightningEffect();
+            } else if (weather.includes('snow')) {
+                fromColor = '#e2e8f0';
+                toColor = '#cbd5e0';
+                textPrimary = '#2d3748';
+                textSecondary = '#4a5568';
+                textAccent = '#2b6cb0';
+                removeRainEffect();
+                removeLightningEffect();
+            } else if (weather.includes('mist') || weather.includes('fog')) {
+                fromColor = '#a0aec0';
+                toColor = '#718096';
+                textPrimary = '#1a202c';
+                textSecondary = '#2d3748';
+                textAccent = '#4a5568';
+                removeRainEffect();
+                removeLightningEffect();
+            } else if (weather.includes('smoke') || weather.includes('haze')) {
+                fromColor = '#a0aec0';
+                toColor = '#718096';
+                textPrimary = '#1a202c';
+                textSecondary = '#2d3748';
+                textAccent = '#4a5568';
+                removeRainEffect();
+                removeLightningEffect();
+            } else if (weather.includes('dust') || weather.includes('sand')) {
+                fromColor = '#d69e2e';
+                toColor = '#b7791f';
+                textPrimary = '#1a202c';
+                textSecondary = '#2d3748';
+                textAccent = '#744210';
+                removeRainEffect();
+                removeLightningEffect();
+            } else if (weather.includes('ash')) {
+                fromColor = '#4a5568';
+                toColor = '#2d3748';
+                textPrimary = '#ffffff';
+                textSecondary = '#e2e8f0';
+                textAccent = '#a0aec0';
+                removeRainEffect();
+                removeLightningEffect();
+            } else if (weather.includes('squall')) {
+                fromColor = '#2d3748';
+                toColor = '#1a202c';
+                textPrimary = '#ffffff';
+                textSecondary = '#e2e8f0';
+                textAccent = '#63b3ed';
+                createRainEffect();
+                removeLightningEffect();
+            } else {
+                // Default background
+                fromColor = '#7f00ff';
+                toColor = '#e100ff';
+                textPrimary = '#ffffff';
+                textSecondary = '#f0f0f0';
+                textAccent = '#ffd700';
+                removeRainEffect();
+                removeLightningEffect();
+            }
+
+            document.documentElement.style.setProperty('--bg-gradient-from', fromColor);
+            document.documentElement.style.setProperty('--bg-gradient-to', toColor);
+            document.documentElement.style.setProperty('--text-primary', textPrimary);
+            document.documentElement.style.setProperty('--text-secondary', textSecondary);
+            document.documentElement.style.setProperty('--text-accent', textAccent);
+
+            // Update text colors
+            document.body.style.color = textPrimary;
+            document.querySelectorAll('a, span').forEach(el => {
+                el.style.color = textPrimary;
+            });
+            document.querySelector('footer p').style.color = textSecondary;
+        }
+
+        function createRainEffect() {
+            const rainContainer = document.getElementById('rain-container');
+            rainContainer.classList.remove('hidden');
+            rainContainer.innerHTML = '';
+            const numberOfDrops = 100;
+
+            for (let i = 0; i < numberOfDrops; i++) {
+                const drop = document.createElement('div');
+                drop.classList.add('rain-drop');
+                drop.style.left = `${Math.random() * 100}%`;
+                drop.style.animationDuration = `${Math.random() * 1 + 0.5}s`;
+                drop.style.animationDelay = `${Math.random() * 2}s`;
+                rainContainer.appendChild(drop);
+            }
+        }
+
+        function removeRainEffect() {
+            const rainContainer = document.getElementById('rain-container');
+            rainContainer.classList.add('hidden');
+            rainContainer.innerHTML = '';
+        }
+
+        function createLightningEffect() {
+            const lightning = document.getElementById('lightning');
+            function flash() {
+                lightning.classList.add('lightning-flash');
+                setTimeout(() => {
+                    lightning.classList.remove('lightning-flash');
+                }, 100);
+                setTimeout(flash, Math.random() * 1000 + 5000);
+            }
+            flash();
+        }
+
+        function removeLightningEffect() {
+            const lightning = document.getElementById('lightning');
+            lightning.classList.remove('lightning-flash');
+        }
+    </script>
+</body>
+</html>

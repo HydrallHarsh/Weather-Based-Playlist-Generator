@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - Dynamic Playlist Generator{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div class="text-center">
+        <h1 class="text-4xl font-extrabold sm:text-5xl md:text-6xl">
+            <span class="block" style="color: var(--text-primary);">Dynamic Playlist Generator</span>
+            <span class="block mt-2" style="color: var(--text-accent);">Discover Your Perfect Mix</span>
+        </h1>
+        <p class="mt-3 max-w-md mx-auto text-base sm:text-lg md:mt-5 md:text-xl md:max-w-3xl" style="color: var(--text-secondary);">
+            Create personalized playlists based on your mood, genre preferences, and favorite artists. Let the music flow!
+        </p>
+       
+        <div class="mt-5 max-w-md mx-auto sm:flex sm:justify-center md:mt-8">
+            {% if user.is_authenticated %}
+                <div class="rounded-md shadow">
+                    <button id="fetch-location" class="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-black bg-yellow-300 hover:bg-yellow-400 md:py-4 md:text-lg md:px-10 transition duration-300">
+                        Fetch Weather for Your Location
+                    </button>
+                </div>
+            {% else %}
+                <div class="rounded-md shadow">
+                    <a href="{% url 'login' %}" class="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-black bg-yellow-300 hover:bg-yellow-400 md:py-4 md:text-lg md:px-10 transition duration-300">
+                        Login to Access Weather Features
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        {% comment %} <button onclick="window.location.href='{% url 'spotify_login' %}'">
+            Generate Playlist
+        </button> {% endcomment %}
+        <!-- Weather Info Section -->
+        <div class="mt-10 text-center">
+            <h2 class="text-2xl font-bold" style="color: var(--text-primary);">Current  Weather</h2>
+            <div id="weather-info" class="mt-4" style="color: var(--text-secondary);">
+                <!-- Weather data will be injected here via JavaScript -->
+                {% if user.is_authenticated %}
+                    <p>Click the button above to get the weather data for your location!</p>
+                {% else %}
+                    <p>Login to access weather features and personalize your experience!</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('fetch-location').addEventListener('click', function() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(success, error);
+    } else {
+        updateWeatherInfo("Geolocation is not supported by this browser.");
+    }
+});
+
+function success(position) {
+    const lat = position.coords.latitude;
+    const lon = position.coords.longitude;
+
+    console.log(`Latitude: ${lat}, Longitude: ${lon}`);
+
+    fetch(`/get-weather/?lat=${lat}&lon=${lon}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Network response was not ok");
+            }
+            return response.json();
+        })
+        .then(data => {
+            const weatherDiv = document.getElementById('weather-info');
+            if (data.error) {
+                updateWeatherInfo(data.error);
+            } else {
+                weatherDiv.innerHTML = `
+                    <p>Location: ${data.location}</p>
+                    <p>Weather: ${data.Weather}</p>
+                    <p>Temperature: ${data.temperature} °C</p>
+                    <p>Description: ${data.description}</p>
+                    <p>Humidity: ${data.humidity}%</p>
+                    <p>Wind Speed: ${data.wind_speed} km/h</p>
+                `;
+                updateBackgroundBasedOnWeather(data.Weather.toLowerCase());
+            }
+        })
+        .catch(error => {
+            updateWeatherInfo("Could not retrieve weather data. Please try again later.");
+            console.error('Error fetching weather data:', error);
+        });
+}
+
+function error(err) {
+    let message = '';
+
+    switch (err.code) {
+        case err.PERMISSION_DENIED:
+            message = "User denied the request for Geolocation.";
+            break;
+        case err.POSITION_UNAVAILABLE:
+            message = "Location information is unavailable.";
+            break;
+        case err.TIMEOUT:
+            message = "The request to get user location timed out. Please try again.";
+            break;
+        case err.UNKNOWN_ERROR:
+            message = "An unknown error occurred. Please check your device settings.";
+            break;
+    }
+
+    updateWeatherInfo(message);
+}
+
+function updateWeatherInfo(message) {
+    const weatherDiv = document.getElementById('weather-info');
+    weatherDiv.innerHTML = `<p>${message}</p>`;
+}
+</script>
+{% endblock %}

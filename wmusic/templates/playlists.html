@@ -1,0 +1,11 @@
+<h1>Your Spotify Playlists</h1>
+
+{% if playlists %}
+    <ul>
+        {% for playlist in playlists %}
+            <li>{{ playlist.name }} - {{ playlist.owner.display_name }}</li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>No playlists found</p>
+{% endif %}
