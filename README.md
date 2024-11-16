@@ -8,10 +8,8 @@ A dynamic web application that creates personalized music playlists based on rea
 
 ## 📌 Repository Stats
 ```
-Primary Language: Jupyter Notebook (71.8%)
-Other Languages: HTML (12.9%), Python (10.7%), CSS (4.5%), JavaScript (0.1%)
+Languages: HTML (12.9%), Python (10.7%), CSS (4.5%), JavaScript (0.1%)
 Maintained by: @HydrallHarsh
-Repository ID: 889350423
 ```
 
 ## 🎯 Features
